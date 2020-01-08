@@ -2,27 +2,10 @@
 import logging
 logger = logging.getLogger(__name__)
 import os.path
-import pickle
 import requests
-import cern_sso
 
-def get_cookiejar(loginUrl, cookieFile=None):
-    if cookieFile:
-        try:
-            with open(cookieFile, "rb") as f:
-                cookieJar = pickle.load(f)
-            with requests.Session() as s:
-                s.cookies = cookieJar
-                r1 = s.get(loginUrl, timeout=cern_sso.DEFAULT_TIMEOUT_SECONDS)
-                if r1.url == loginUrl:
-                    logging.debug("SSO cookie from {0} is still valid".format(cookieFile))
-                    return cookieJar
-        except IOError as ex:
-            logger.exception(ex)
-    cookieJar = cern_sso.krb_sign_on(loginUrl)
-    with open(cookieFile, "wb") as f:
-        pickle.dump(cookieJar, f)
-    return cookieJar
+from twikitools.cern_sso import get_sso_cookiejar, DEFAULT_TIMEOUT_SECONDS
+from twikitools.fetch import get_topic_raw
 
 if __name__ == "__main__":
     import argparse
@@ -37,22 +20,18 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=(logging.DEBUG if args.verbose else logging.INFO))
 
-    cookiejar = get_cookiejar(args.login_url, args.cookie_jar)
+    sso_cookiejar = get_sso_cookiejar(args.login_url, args.cookie_jar)
 
     logger.info("Your SSO cookies are ready - have fun!")
 
     resp = []
     with requests.Session() as s:
-        s.cookies = cookiejar
+        s.cookies = sso_cookiejar
         for toDump in args.dumpdebug:
-            web,topic = toDump.split(".")
-            rd = s.get("{0}/view/{web}/{topic}?skin=text&raw=debug&contenttype=text/plain".format(args.root, web=web, topic=topic), timeout=cern_sso.DEFAULT_TIMEOUT_SECONDS)
-            contents = rd.content.decode(rd.apparent_encoding)
+            contents = get_topic_raw(s, toDump, args.root)
             logging.info("Contents of {0}:".format(toDump))
             print("\n{0}\n\n".format(contents))
         for toDump in args.dumpheaders:
-            web,topic = toDump.split(".")
-            rd = s.get("{0}/view/{web}/{topic}?skin=text&raw=debug&contenttype=text/plain".format(args.root, web=web, topic=topic), timeout=cern_sso.DEFAULT_TIMEOUT_SECONDS)
-            contents = rd.content.decode(rd.apparent_encoding)
+            contents = get_topic_raw(s, toDump, args.root)
             logging.info("Headers of {0}:".format(toDump))
             print("\n".join(ln.strip().lstrip("-") for ln in contents.split("\n") if ln.lstrip().startswith("---"))) ## only twiki headers
