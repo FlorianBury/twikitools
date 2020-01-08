@@ -12,15 +12,15 @@ def _getAttr(results, attName, default=""):
     else:
         return default
 
-def webindex_entries(webindex_soup):
+def searchresults_entries(searchresults_soup):
     """
-    Iterator that gets the data out of a webindex html page
+    Iterator that gets the data out of a searchresults html page
 
-    :param webindex_soup: BeautifulSoup of the WebIndex html page
+    :param searchresults_soup: BeautifulSoup of the searchresults html page
 
     :yields: ``("Web.Topic", "revision", "author_name", "summary")``
     """
-    for elem in webindex_soup.find_all("div", class_="patternSearchResult"):
+    for elem in searchresults_soup.find_all("div", class_="patternSearchResult"):
         href = _getAttr(elem.select("div.twikiTopRow > a"), "href")
         web, topic = tuple(href.split("/")[-2:])
         rev = _getStr(elem.select("span.twikiSRRev > a"))
