@@ -7,6 +7,8 @@ verify_ssl = true
 
 [packages]
 python-cern-sso = {git = "https://github.com/cerndb/cern-sso-python.git"}
+beautifulsoup4 = "*"
+lxml = "*"
 
 [requires]
 python_version = "3.8"
